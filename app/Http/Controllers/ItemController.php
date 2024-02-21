@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -89,5 +90,35 @@ class ItemController extends Controller
         $item = Item::find($id);
         $item->delete();
         return response()->json(null, 204);
+    }
+
+    public function getItemsWithCategories()
+    {
+        $items = DB::collection('items')
+            ->aggregate([
+                [
+                    '$lookup' => [
+                        'from' => 'categories',
+                        'localField' => 'category_id',
+                        'foreignField' => '_id',
+                        'as' => 'category'
+                    ]
+                ],
+                [
+                    '$unwind' => '$category' // Unwind the array created by $lookup
+                ],
+                [
+                    '$project' => [
+                        'name' => 1,
+                        'description' => 1,
+                        'price' => 1,
+                        'quantity' => 1,
+                        'category.name' => 1, // Include category details
+                        'category.description' => 1,
+                    ]
+                ]
+            ]);
+
+        return response()->json($items);
     }
 }
